@@ -65,16 +65,15 @@ contract ExchangeTest is Test {
     function testEthToTokenSwap() public liquidityAdded {
         uint256 initialTokenReserve = exchange.getReserve();
         uint256 initialEthReserve = address(exchange).balance;
-        uint256 ethAmount = 1 ether;
         vm.startPrank(user);
-        exchange.ethToToken{value: ethAmount}(0);
+        exchange.ethToToken{value: 1 ether}(0);
         vm.stopPrank();
         uint256 finalTokenReserve = exchange.getReserve();
         uint256 finalEthReserve = address(exchange).balance;
         console.log(finalTokenReserve, initialTokenReserve);
         console.log(finalEthReserve, initialEthReserve);
-        assert(finalEthReserve < initialEthReserve);
-        assert(finalTokenReserve > initialTokenReserve);
+        assert(finalEthReserve > initialEthReserve);
+        assert(finalTokenReserve < initialTokenReserve);
     }
 
     function testTokenToEthSwap() public liquidityAdded {
@@ -88,7 +87,7 @@ contract ExchangeTest is Test {
         vm.stopPrank();
         uint256 finalTokenReserve = exchange.getReserve();
         uint256 finalEthReserve = address(exchange).balance;
-        assert(finalEthReserve > initialEthReserve);
-        assert(finalTokenReserve < initialTokenReserve);
+        assert(finalEthReserve < initialEthReserve);
+        assert(finalTokenReserve > initialTokenReserve);
     }
 }

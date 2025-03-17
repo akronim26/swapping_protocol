@@ -7,10 +7,10 @@ import {ReentrancyGuard} from "../lib/openzeppelin-contracts/contracts/utils/Ree
 
 /// @title A swapping protocol
 /// @author Abhivansh Saini
-/// @notice  This is a swapping protocol in which the user can swap between ETH (a native token, not an ERC20 token) and a exchange token (an ERC20 token) using the constant product rule of decentralised finance in which the product of the two tokens which are supposed to be swapped (here ETH and exchange token) remains approximately constant before and after swap. There is also the concept of liquidity pools in which if someone liquidity provider provides the liquidity, gets liquidity tokens for every exchange token they provide. Later they can get their provided liquidity back in the ratio of their liquidity tokens. The protocol also charges 1% fee for swapping which gets distributed to the liquidity providers on basis of ratio of their provided liquidity. This acts as their incentive to provide liquidity into the protocol.
+/// @notice  This is a swapping protocol in which the user can swap between ETH (a native token, not an ERC20 token) and a exchange token (an ERC20 token) using the constant product rule of decentralised finance in which the product of the two tokens which are supposed to be swapped (here ETH and exchange token) remains approximately constant before and after swap. There is also the concept of liquidity pools in which if someone liquidity provider provides the liquidity, gets liquidity tokens for every exchange token they provide. Later they can get their provided liquidity back in the ratio of their liquidity tokens. The protocol also charges 1% fee for swapping. This acts as their incentive to provide liquidity into the protocol. There might be a confusion that when any users calls the swapping function, there is an alteration in the total amount of exchange tokens and hence they will not be same as the liquidity tokens anymore and hence this could create errors while removing liquidity. But this is not the case as even if someone calls the swapping function, the relative ratio of liquidity tokens remain the same and hence every liquidity provider would be able to remove the liquidity in the correct ratio as they provided.
 /// @dev I have imported IERC20 for the functioning of the exchange token and ERC20 for the functioning of liquidity tokens.
 
-/// @dev This contract creates the exchange between the ETH and the exchange token. It provides functions like addLiquidity, removeLiquidity for Liquidity Providers. It also provide functions to get token and ETH amount the user will get on swapping and also provide to function to swap for users.
+/// @dev This contract creates the exchange between the ETH and the exchange token. It provides functions like addLiquidity, removeLiquidity for Liquidity Providers. It also provide functions to swap ETH with exchange token and vice versa.
 
 contract Exchange is ERC20, ReentrancyGuard {
     address tokenAddress;
@@ -28,7 +28,7 @@ contract Exchange is ERC20, ReentrancyGuard {
 
     mapping(address user => uint256 amount) userToLPTokenBalance;
 
-    /// @dev The argument in the constructor is for the exchange token and the arguments in the ERC20 are for the liquidity tokens we are providing to the liquidity providers.
+    /// @dev The argument in the constructor is for the exchange token and the arguments in the ERC20 are for the liquidity tokens provided to the liquidity providers.
 
     constructor(address _token) ERC20("Liquidity", "LP") {
         if (_token == address(0)) {
@@ -79,9 +79,10 @@ contract Exchange is ERC20, ReentrancyGuard {
 
     function removeLiquidity(uint256 liquidityTokens) public nonReentrant {
         require(liquidityTokens > 0, Exchange_AmountIsZero());
-        uint256 tokenAmount = liquidityTokens;
-        uint256 ethAmount = (address(this).balance * tokenAmount) /
-            getReserve();
+        uint256 totalLPTokens = getTotalLPTokens();
+        uint256 ethAmount = (address(this).balance * liquidityTokens) /
+            totalLPTokens;
+        uint256 tokenAmount = (getReserve() * liquidityTokens) / totalLPTokens;
         _burn(msg.sender, liquidityTokens);
         userToLPTokenBalance[msg.sender] -= liquidityTokens;
         payable(msg.sender).transfer(ethAmount);
@@ -97,6 +98,7 @@ contract Exchange is ERC20, ReentrancyGuard {
     /// @param inputAmount - It is the amount in exchange of which the user wants the other token (can be ETH or exchange token).
     /// @param inputReserve - It is the reserve of the inputAmount token.
     /// @param outputReserve - It is the reserve of the token that the user will get in exchange of inputAmount.
+    /// @notice The function is taken from Uniswap V2 code.
 
     function getAmount(
         uint256 inputAmount,
@@ -170,5 +172,11 @@ contract Exchange is ERC20, ReentrancyGuard {
 
     function getLPTokenBalance(address user) public view returns (uint256) {
         return userToLPTokenBalance[user];
+    }
+
+    /// @dev This function gives the total amount of liquidity tokens the exchange holds.
+
+    function getTotalLPTokens() public view returns(uint256) {
+        return totalSupply();
     }
 }
